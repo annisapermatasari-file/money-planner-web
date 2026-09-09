@@ -1,0 +1,8 @@
+# This app follows the repository root .gitignore.
+# Kept local so `next`/editors that scan per-package ignores still behave.
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env.local
