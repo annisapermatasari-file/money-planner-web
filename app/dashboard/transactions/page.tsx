@@ -1,27 +1,37 @@
 import { redirect } from "next/navigation";
-import { createClient } from "../../../lib/supabase/server";
+import { getSession } from "../../../lib/session";
+import { adminDb } from "../../../lib/firebase/admin";
 import { formatCurrency } from "../../../lib/format";
 import { TransactionForm } from "../../../components/dashboard/TransactionForm";
 import { DeleteTransactionButton } from "../../../components/dashboard/DeleteTransactionButton";
 import type { Transaction } from "../../../lib/types";
 
 export default async function TransactionsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getSession();
+  if (!session) {
     redirect("/login");
   }
 
-  const { data } = await supabase
-    .from("transactions")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("occurred_on", { ascending: false })
-    .limit(50);
+  const snap = await adminDb()
+    .collection("users")
+    .doc(session.uid)
+    .collection("transactions")
+    .orderBy("occurredOn", "desc")
+    .limit(50)
+    .get();
 
-  const transactions = (data ?? []) as Transaction[];
+  const transactions: Transaction[] = snap.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      occurredOn: data.occurredOn,
+      category: data.category,
+      description: data.description ?? null,
+      amount: data.amount,
+      type: data.type,
+      createdAt: data.createdAt?.toDate?.().toISOString() ?? "",
+    };
+  });
 
   return (
     <div className="dashboard-page">
@@ -52,7 +62,7 @@ export default async function TransactionsPage() {
             <tbody>
               {transactions.map((transaction) => (
                 <tr key={transaction.id}>
-                  <td>{transaction.occurred_on}</td>
+                  <td>{transaction.occurredOn}</td>
                   <td>{transaction.category}</td>
                   <td>{transaction.description ?? "—"}</td>
                   <td className={transaction.type === "income" ? "type-income" : "type-expense"}>

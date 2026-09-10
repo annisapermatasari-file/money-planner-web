@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { createClient } from "../../lib/supabase/client";
+import { sendSignInLinkToEmail } from "firebase/auth";
+import { getFirebaseAuth } from "../../lib/firebase/client";
+
+export const PENDING_EMAIL_KEY = "money-planner:pending-email";
 
 type Status = "idle" | "loading" | "sent" | "error";
 
@@ -15,21 +18,18 @@ export function LoginForm({ initialError }: { initialError: string | null }) {
     setStatus("loading");
     setError(null);
 
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (signInError) {
+    try {
+      const auth = getFirebaseAuth();
+      await sendSignInLinkToEmail(auth, email, {
+        url: `${window.location.origin}/auth/callback`,
+        handleCodeInApp: true,
+      });
+      window.localStorage.setItem(PENDING_EMAIL_KEY, email);
+      setStatus("sent");
+    } catch (err) {
       setStatus("error");
-      setError(signInError.message);
-      return;
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     }
-
-    setStatus("sent");
   }
 
   if (status === "sent") {
@@ -37,7 +37,7 @@ export function LoginForm({ initialError }: { initialError: string | null }) {
       <div className="auth-card">
         <h2>Check your inbox</h2>
         <p>
-          We sent a magic link to <strong>{email}</strong>. Open it on this device to
+          We sent a sign-in link to <strong>{email}</strong>. Open it on this device to
           sign in — no password needed.
         </p>
       </div>
@@ -47,7 +47,7 @@ export function LoginForm({ initialError }: { initialError: string | null }) {
   return (
     <form className="auth-card" onSubmit={handleSubmit}>
       <h2>Sign in</h2>
-      <p>Enter your email and we will send you a magic link.</p>
+      <p>Enter your email and we will send you a sign-in link.</p>
       {initialError && status === "idle" && <p className="auth-banner">{initialError}</p>}
       <label htmlFor="email">Email</label>
       <input
@@ -61,7 +61,7 @@ export function LoginForm({ initialError }: { initialError: string | null }) {
       />
       {error && <p className="form-error">{error}</p>}
       <button className="button button-primary" type="submit" disabled={status === "loading"}>
-        {status === "loading" ? "Sending..." : "Send magic link"}
+        {status === "loading" ? "Sending..." : "Send sign-in link"}
       </button>
     </form>
   );

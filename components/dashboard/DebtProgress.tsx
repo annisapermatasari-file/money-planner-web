@@ -22,19 +22,19 @@ export function DebtProgress({ debts }: { debts: Debt[] }) {
           <tbody>
             {debts.map((debt) => {
               const paid =
-                debt.initial_balance > 0
+                debt.initialBalance > 0
                   ? Math.min(
                       100,
                       Math.round(
-                        ((debt.initial_balance - debt.current_balance) / debt.initial_balance) * 100
+                        ((debt.initialBalance - debt.currentBalance) / debt.initialBalance) * 100
                       )
                     )
                   : 0;
               return (
                 <tr key={debt.id}>
                   <td>{debt.name}</td>
-                  <td>{formatCurrency(debt.initial_balance)}</td>
-                  <td>{formatCurrency(debt.current_balance)}</td>
+                  <td>{formatCurrency(debt.initialBalance)}</td>
+                  <td>{formatCurrency(debt.currentBalance)}</td>
                   <td>
                     <div className="progress-track">
                       <div className="progress-fill" style={{ width: `${paid}%` }} />

@@ -6,7 +6,7 @@ const HEIGHT = 220;
 const PADDING = 28;
 
 export function NetWorthChart({ summaries }: { summaries: MonthlySummary[] }) {
-  const byMonth = new Map(summaries.map((summary) => [summary.month, summary.net_worth]));
+  const byMonth = new Map(summaries.map((summary) => [summary.month, summary.netWorth]));
   const values = MONTH_NAMES.map((_, index) => byMonth.get(index + 1) ?? 0);
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);

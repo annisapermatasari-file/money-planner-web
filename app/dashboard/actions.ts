@@ -1,14 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "../../lib/supabase/server";
+import { FieldValue } from "firebase-admin/firestore";
+import { adminDb } from "../../lib/firebase/admin";
+import { getSession } from "../../lib/session";
 
 export async function addTransaction(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getSession();
+  if (!session) {
     throw new Error("Not authenticated");
   }
 
@@ -22,27 +21,34 @@ export async function addTransaction(formData: FormData) {
     throw new Error("Enter a category and a positive amount.");
   }
 
-  const { error } = await supabase.from("transactions").insert({
-    user_id: user.id,
-    category,
-    description: description || null,
-    amount,
-    type,
-    occurred_on: occurredOn,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  await adminDb()
+    .collection("users")
+    .doc(session.uid)
+    .collection("transactions")
+    .add({
+      category,
+      description: description || null,
+      amount,
+      type,
+      occurredOn,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 
   revalidatePath("/dashboard/transactions");
 }
 
 export async function deleteTransaction(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("transactions").delete().eq("id", id);
-  if (error) {
-    throw new Error(error.message);
+  const session = await getSession();
+  if (!session) {
+    throw new Error("Not authenticated");
   }
+
+  await adminDb()
+    .collection("users")
+    .doc(session.uid)
+    .collection("transactions")
+    .doc(id)
+    .delete();
+
   revalidatePath("/dashboard/transactions");
 }

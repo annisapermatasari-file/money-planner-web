@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "../lib/supabase/server";
+import { getSession } from "../lib/session";
 
 const FEATURES = [
   "All-in-one finance tracker",
@@ -9,10 +9,7 @@ const FEATURES = [
 ];
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
   return (
     <main className="landing">
@@ -28,8 +25,8 @@ export default async function HomePage() {
             <li key={feature}>{feature}</li>
           ))}
         </ul>
-        <Link className="button button-primary" href={user ? "/dashboard" : "/login"}>
-          {user ? "Go to dashboard" : "Get started"}
+        <Link className="button button-primary" href={session ? "/dashboard" : "/login"}>
+          {session ? "Go to dashboard" : "Get started"}
         </Link>
       </section>
     </main>

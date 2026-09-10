@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "../../lib/supabase/server";
+import { getSession } from "../../lib/session";
 import { SignOutButton } from "../../components/dashboard/SignOutButton";
 
 export default async function DashboardLayout({
@@ -8,12 +8,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
-  if (!user) {
+  if (!session) {
     redirect("/login");
   }
 
@@ -31,7 +28,7 @@ export default async function DashboardLayout({
       </aside>
       <div className="dashboard-main">
         <header className="dashboard-header">
-          <span>{user.email}</span>
+          <span>{session.email}</span>
           <SignOutButton />
         </header>
         <main>{children}</main>

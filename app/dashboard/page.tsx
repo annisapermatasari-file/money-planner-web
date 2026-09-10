@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "../../lib/supabase/server";
+import { getSession } from "../../lib/session";
 import { getBudgetItems, getDashboardData } from "../../lib/data";
 import { PeriodTabs } from "../../components/dashboard/PeriodTabs";
 import { SummaryCard } from "../../components/dashboard/SummaryCard";
@@ -14,14 +14,13 @@ import type { MonthlySummary } from "../../lib/types";
 function emptySummary(year: number, month: number): MonthlySummary {
   return {
     id: "",
-    user_id: "",
     year,
     month,
     income: 0,
     expenses: 0,
     savings: 0,
-    debt_balance: 0,
-    net_worth: 0,
+    debtBalance: 0,
+    netWorth: 0,
   };
 }
 
@@ -31,8 +30,8 @@ function sumSummaries(acc: MonthlySummary, summary: MonthlySummary): MonthlySumm
     income: acc.income + summary.income,
     expenses: acc.expenses + summary.expenses,
     savings: acc.savings + summary.savings,
-    debt_balance: summary.debt_balance,
-    net_worth: summary.net_worth,
+    debtBalance: summary.debtBalance,
+    netWorth: summary.netWorth,
   };
 }
 
@@ -43,24 +42,21 @@ export default async function DashboardPage({
 }) {
   const { period } = await searchParams;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getSession();
+  if (!session) {
     redirect("/login");
   }
 
   const year = new Date().getFullYear();
   const selectedMonth = period && period !== "annual" ? Number(period) : null;
 
-  const { summaries, goals, debts } = await getDashboardData(user.id, year);
+  const { summaries, goals, debts } = await getDashboardData(session.uid, year);
 
   const totals = selectedMonth
     ? summaries.find((s) => s.month === selectedMonth) ?? emptySummary(year, selectedMonth)
     : summaries.reduce(sumSummaries, emptySummary(year, 0));
 
-  const budgetItems = selectedMonth ? await getBudgetItems(user.id, year, selectedMonth) : [];
+  const budgetItems = selectedMonth ? await getBudgetItems(session.uid, year, selectedMonth) : [];
 
   return (
     <div className="dashboard-page">
@@ -76,8 +72,8 @@ export default async function DashboardPage({
         <SummaryCard label="Total Income" value={formatCurrency(totals.income)} />
         <SummaryCard label="Total Expenses" value={formatCurrency(totals.expenses)} />
         <SummaryCard label="Savings" value={formatCurrency(totals.savings)} />
-        <SummaryCard label="Debt Balance" value={formatCurrency(totals.debt_balance)} />
-        <SummaryCard label="Net Worth" value={formatCurrency(totals.net_worth)} />
+        <SummaryCard label="Debt Balance" value={formatCurrency(totals.debtBalance)} />
+        <SummaryCard label="Net Worth" value={formatCurrency(totals.netWorth)} />
       </div>
 
       {selectedMonth ? (

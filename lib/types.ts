@@ -1,29 +1,26 @@
 export type MonthlySummary = {
   id: string;
-  user_id: string;
   year: number;
   month: number;
   income: number;
   expenses: number;
   savings: number;
-  debt_balance: number;
-  net_worth: number;
+  debtBalance: number;
+  netWorth: number;
 };
 
 export type Transaction = {
   id: string;
-  user_id: string;
-  occurred_on: string;
+  occurredOn: string;
   category: string;
   description: string | null;
   amount: number;
   type: "income" | "expense";
-  created_at: string;
+  createdAt: string;
 };
 
 export type BudgetItem = {
   id: string;
-  user_id: string;
   year: number;
   month: number;
   category: string;
@@ -33,17 +30,15 @@ export type BudgetItem = {
 
 export type SavingsGoal = {
   id: string;
-  user_id: string;
   name: string;
-  target_amount: number;
-  current_amount: number;
-  target_date: string | null;
+  targetAmount: number;
+  currentAmount: number;
+  targetDate: string | null;
 };
 
 export type Debt = {
   id: string;
-  user_id: string;
   name: string;
-  initial_balance: number;
-  current_balance: number;
+  initialBalance: number;
+  currentBalance: number;
 };

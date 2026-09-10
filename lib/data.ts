@@ -1,40 +1,42 @@
-import { createClient } from "./supabase/server";
+import "server-only";
+import { adminDb } from "./firebase/admin";
 import type { BudgetItem, Debt, MonthlySummary, SavingsGoal } from "./types";
 
-export async function getDashboardData(userId: string, year: number) {
-  const supabase = await createClient();
+// Each collection here is small (a personal finance app's own data), so we
+// fetch the whole per-user subcollection and filter/sort in code. This also
+// sidesteps Firestore's composite-index requirements and lets values be
+// added directly in the console without needing every field (e.g. no
+// createdAt) just to satisfy a server-side orderBy.
 
-  const [{ data: summaries }, { data: goals }, { data: debts }] = await Promise.all([
-    supabase
-      .from("monthly_summaries")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("year", year)
-      .order("month"),
-    supabase.from("savings_goals").select("*").eq("user_id", userId).order("created_at"),
-    supabase.from("debts").select("*").eq("user_id", userId).order("created_at"),
+export async function getDashboardData(uid: string, year: number) {
+  const userRef = adminDb().collection("users").doc(uid);
+
+  const [summariesSnap, goalsSnap, debtsSnap] = await Promise.all([
+    userRef.collection("monthlySummaries").get(),
+    userRef.collection("savingsGoals").get(),
+    userRef.collection("debts").get(),
   ]);
 
-  return {
-    summaries: (summaries ?? []) as MonthlySummary[],
-    goals: (goals ?? []) as SavingsGoal[],
-    debts: (debts ?? []) as Debt[],
-  };
+  const summaries = summariesSnap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }) as MonthlySummary)
+    .filter((summary) => summary.year === year)
+    .sort((a, b) => a.month - b.month);
+
+  const goals = goalsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as SavingsGoal);
+  const debts = debtsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Debt);
+
+  return { summaries, goals, debts };
 }
 
 export async function getBudgetItems(
-  userId: string,
+  uid: string,
   year: number,
   month: number
 ): Promise<BudgetItem[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("budget_items")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("year", year)
-    .eq("month", month)
-    .order("category");
+  const snap = await adminDb().collection("users").doc(uid).collection("budgetItems").get();
 
-  return (data ?? []) as BudgetItem[];
+  return snap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }) as BudgetItem)
+    .filter((item) => item.year === year && item.month === month)
+    .sort((a, b) => a.category.localeCompare(b.category));
 }
